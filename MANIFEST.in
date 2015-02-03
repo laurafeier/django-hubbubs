@@ -1,0 +1,4 @@
+include README.md
+recursive-include hubbubs/fixtures *
+recursive-include hubbubs/static *
+recursive-include hubbubs/templates *.html
