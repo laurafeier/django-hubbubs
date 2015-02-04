@@ -1,7 +1,10 @@
 from django.db import models
 from django.contrib.sites.models import Site
 from django.utils.translation import ugettext_lazy as _
+
 from requests import Request, codes
+from urlparse import urljoin
+
 from .exceptions import SubscriptionError
 
 
@@ -37,9 +40,12 @@ class AbstractSubscription(models.Model):
     site = models.ForeignKey(Site, blank=True, null=True)
 
     @property
-    def callback(self):
-        # TODO callback view
-        return ""
+    def callback_url(self):
+        raise NotImplementedError()
+
+    def full_callback_url(self):
+        domain = (self.site or Site.objects.get_current()).domain
+        return urljoin("http://" + domain, self.callback_url)
 
     def subscribe(self, verify_mode=u'sync', lease_seconds=None):
         return self._send_subscription(
@@ -60,7 +66,7 @@ class AbstractSubscription(models.Model):
         if verify_mode not in (u'sync', u'async'):
             verify_mode = u'sync'
         data = {
-            u'hub.callback': self.callback,
+            u'hub.callback': self.full_callback_url(),
             u'hub.mode': mode,
             u'hub.topic': self.topic,
             u'hub.verify': verify_mode,
@@ -96,10 +102,9 @@ class AbstractSubscription(models.Model):
         else:
             # wheather succeeded, verification failed or subscription failed
             self.verified = succeeded
-            if is_subscribe:
-                self.status = self.ACTIVE if succeeded else self.INACTIVE
-            else:
-                self.status = self.INACTIVE if succeeded else self.ACTIVE
+            if succeeded:
+                # status changes only if verification succeeded
+                self.status = self.ACTIVE if is_subscribe else self.INACTIVE
 
         self.save()
 

@@ -26,3 +26,4 @@ STATIC_ROOT = ''
 STATIC_URL = '/static/'
 
 SECRET_KEY = 'c8syx=b9zy)+v$07wb+f!=&amp;#38w829lp*r$$%6i_6b@khg1-n5'
+SITE_ID = 1
