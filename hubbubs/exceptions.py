@@ -1,0 +1,4 @@
+
+
+class SubscriptionError(Exception):
+    pass

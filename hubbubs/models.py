@@ -1,3 +1,5 @@
-from django.db import models
+from .abstract import AbstractSubscription
 
-# Create your models here.
+
+class Subscription(AbstractSubscription):
+    pass

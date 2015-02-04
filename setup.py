@@ -6,7 +6,8 @@ README = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.md')
 
 
 DEPENDENCIES = [
-    'django >=1.4, <1.5',
+    'django>=1.4',
+    'requests',
 ]
 
 setup(
