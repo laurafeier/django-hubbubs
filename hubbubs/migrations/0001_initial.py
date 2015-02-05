@@ -17,7 +17,6 @@ class Migration(SchemaMigration):
             ('secret', self.gf('django.db.models.fields.CharField')(max_length=255, null=True, blank=True)),
             ('lease_expiration', self.gf('django.db.models.fields.DateTimeField')(null=True, blank=True)),
             ('status', self.gf('django.db.models.fields.PositiveSmallIntegerField')(default=0)),
-            ('verified', self.gf('django.db.models.fields.BooleanField')(default=False)),
             ('updated_at', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
             ('site', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['sites.Site'], null=True, blank=True)),
         ))
@@ -46,7 +45,6 @@ class Migration(SchemaMigration):
             'status': ('django.db.models.fields.PositiveSmallIntegerField', [], {'default': '0'}),
             'topic': ('django.db.models.fields.URLField', [], {'max_length': '255'}),
             'updated_at': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
-            'verified': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'verify_token': ('django.db.models.fields.CharField', [], {'max_length': '255', 'null': 'True', 'blank': 'True'})
         },
         'sites.site': {
