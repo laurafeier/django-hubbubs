@@ -2,10 +2,14 @@ from django.db import router
 from django.views.generic import View
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import classonlymethod
+from django.utils.encoding import force_unicode
 from django.http import HttpResponse, Http404
 from django.shortcuts import get_object_or_404
 from django.core.exceptions import ImproperlyConfigured
 from hubbubs.abstract import AbstractSubscription
+
+import hmac
+import hashlib
 
 
 class AbstractSubscriberCallback(generic.View):
@@ -80,3 +84,18 @@ class AbstractSubscriberCallback(generic.View):
 
     def post(self, request, object_id, *args, **kwargs):
         subscription = self._get_object(object_id)
+
+        if subscription.secret:
+            signature = request.META.get('X-Hub-Signature', '')
+            if not signature:
+                return HttpResponse('')
+            secret = subscription.secret.encode('utf-8')
+            message = request.body
+            sha1 = hmac.new(secret, message, hashlib.sha1).hexdigest()
+            if force_unicode(signature) != force_unicode("sha1=%s" % sha1):
+                return HttpResponse('')
+
+
+        # TODO check if feed topic url or hub url changed; if so, update subscription
+        # TODO send signal: new feed available
+        return HttpResponse('')

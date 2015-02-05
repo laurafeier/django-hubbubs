@@ -22,7 +22,6 @@ class AbstractSubscription(models.Model):
         _('Verify Token'), max_length=255, null=True, blank=True)
     lease_expiration = models.DateTimeField(
         _('Lease expiration'), editable=False, null=True, blank=True)
-    # todo secret
     secret = models.CharField(
         _('Secret'), max_length=255, null=True, blank=True)
 
