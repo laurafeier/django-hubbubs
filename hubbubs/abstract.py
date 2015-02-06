@@ -43,8 +43,8 @@ class AbstractSubscription(models.Model):
     }
     status = models.PositiveSmallIntegerField(
         editable=False, choices=STATUS_CODES.items(), default=INACTIVE)
-    # used for debugging purposes that shows last verification or
-    #   subscribing/unsubscribing action was issued
+    # used for debugging purposes and will show when the last activity
+    #   for this subscription happened
     updated_at = models.DateTimeField(auto_now=True)
     site = models.ForeignKey(Site, blank=True, null=True)
 

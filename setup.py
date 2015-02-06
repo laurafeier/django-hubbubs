@@ -8,6 +8,7 @@ README = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.md')
 DEPENDENCIES = [
     'django>=1.4,<=1.7',
     'requests',
+    'feedparser',
 ]
 
 setup(

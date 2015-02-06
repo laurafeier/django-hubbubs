@@ -7,9 +7,11 @@ from django.http import HttpResponse, Http404
 from django.shortcuts import get_object_or_404
 from django.core.exceptions import ImproperlyConfigured
 from hubbubs.abstract import AbstractSubscription
+from hubbubs.signals import feed_available
 
 import hmac
 import hashlib
+import feedparser
 
 
 class AbstractSubscriberCallback(generic.View):
@@ -84,18 +86,40 @@ class AbstractSubscriberCallback(generic.View):
 
     def post(self, request, object_id, *args, **kwargs):
         subscription = self._get_object(object_id)
+        message = request.body
+
+        if not message.strip():
+            return HttpResponse('')
 
         if subscription.secret:
             signature = request.META.get('X-Hub-Signature', '')
             if not signature:
                 return HttpResponse('')
             secret = subscription.secret.encode('utf-8')
-            message = request.body
             sha1 = hmac.new(secret, message, hashlib.sha1).hexdigest()
             if force_unicode(signature) != force_unicode("sha1=%s" % sha1):
                 return HttpResponse('')
 
+        feed_data = (feedparser.parse(message) or {})
+        links = feed_data.get('feed', {}).get('links', [])
+        rel_links = {
+            (link or {}).get('rel', ''): (link or {}).get('href', '')
+            for link in links
+        }
 
-        # TODO check if feed topic url or hub url changed; if so, update subscription
-        # TODO send signal: new feed available
+        topic = rel_links.get('self', '')
+        hub = rel_links.get('hub', '')
+        if topic and topic != subscription.topic:
+            subscription.topic = topic
+        if hub and hub != subscription.hub:
+            subscription.hub = hub
+        subscription.save()
+
+        # notify new feed available
+        feed_available.send(
+            sender=self,
+            subscription=subscription,
+            parsed_feed=feed_data,
+            raw_feed=message
+        )
         return HttpResponse('')
