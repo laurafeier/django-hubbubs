@@ -1,7 +1,7 @@
 from django.db import router
 from django.views.generic import View
 from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import classonlymethod
+from django.utils.decorators import classonlymethod, method_decorator
 from django.utils.encoding import force_unicode
 from django.http import HttpResponse, Http404
 from django.shortcuts import get_object_or_404
@@ -14,7 +14,7 @@ import hashlib
 import feedparser
 
 
-class AbstractSubscriberCallback(generic.View):
+class AbstractSubscriberCallback(View):
 
     model = None
 
