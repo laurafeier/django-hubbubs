@@ -1,15 +1,17 @@
 from django.template import Template, RequestContext
 from django.forms.models import modelform_factory
+from django.contrib import messages
 from django.contrib import admin
 from django.contrib.admin.util import flatten_fieldsets
 from django.contrib.admin.views.main import IS_POPUP_VAR
 from django.conf.urls.defaults import patterns, url
 from django.core.urlresolvers import reverse
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.template.defaultfilters import timesince_filter
 from .models import Subscription
-from .forms import SubscribeForm
+from .forms import SubscribeForm, UnsubscribeForm
+from .exceptions import SubscriptionError
 
 
 class AbstractSubscriptionAdmin(admin.ModelAdmin):
@@ -79,17 +81,42 @@ class AbstractSubscriptionAdmin(admin.ModelAdmin):
             raise PermissionDenied
 
         opts = self.model._meta
-        app_label = opts.app_label
 
         formCls = modelform_factory(self.model, form=formCls)
+        data, files = None, None
         if request.method == 'POST':
-            form = formCls(request.POST, request.FILES, instance=subscription)
-            if form.is_valid():
-                new_object = self.save_form(request, form, change=True)
+            data, files = request.POST, request.FILES
+        form = formCls(data, files, instance=subscription)
+
+        if hasattr(form, 'required_fields'):
+            required_fields = getattr(form, 'required_fields') or ()
+            for field in form.fields.values():
+                field.required = field in required_fields
+
+        if request.method == 'POST' and form.is_valid():
+            try:
+                new_object = form.save(commit=True)
+            except (SubscriptionError, ) as err:
+                err_msg = "%s requested for topic %s failed: %s" % (
+                    action_name.capitalize(),
+                    subscription.topic,
+                    err
+                )
+                messages.error(request, err_msg)
+            else:
+                changed_fields = getattr(
+                    form, 'get_changed_fields_msg',
+                    lambda: form.changed_data
+                )
+                change_message = "%s requested for topic %s: %s" % (
+                    action_name.capitalize(),
+                    new_object.topic,
+                    changed_fields()
+                )
                 self.log_change(request, new_object, change_message)
-                # TODO return redirect to changelist
-        else:
-            form = formCls(instance=subscription)
+                messages.info(request, change_message)
+                return HttpResponseRedirect('admin:%s_%s_changelist' % (
+                    opts.app_label, opts.model_name))
 
         adminForm = admin.helpers.AdminForm(
             form,
@@ -108,7 +135,7 @@ class AbstractSubscriptionAdmin(admin.ModelAdmin):
             'media': self.media + adminForm.media,
             'errors': admin.helpers.AdminErrorList(form, []),
             'is_popup': is_popup,
-            'app_label': app_label,
+            'app_label': opts.app_label,
             'opts': opts,
             'change': True,
             'add': False
@@ -127,7 +154,7 @@ class AbstractSubscriptionAdmin(admin.ModelAdmin):
 
     def unsubscribe(self, request, sub_id):
         return self._custom_action_view(
-            request, sub_id, SubscribeForm, 'subscription')
+            request, sub_id, UnsubscribeForm, 'unsubscription')
 
 
 class SubscriptionAdmin(AbstractSubscriptionAdmin):

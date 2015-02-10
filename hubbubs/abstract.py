@@ -4,8 +4,9 @@ from django.utils.translation import ugettext_lazy as _
 from django.utils import crypto, timezone
 from datetime import timedelta
 
-from requests import Request, codes
-from urlparse import urljoin
+from requests import (
+    codes, exceptions as req_exceptions, request as request_sender)
+from urlparse import urljoin, urlparse
 
 from .exceptions import SubscriptionError
 from .settings import USE_SSL, LEASE_SECONDS
@@ -112,7 +113,12 @@ class AbstractSubscription(models.Model):
         if lease_seconds is not None:
             data[u'hub.lease_seconds'] = lease_seconds
 
-        response = self._dispatch(Request(method=u'POST', data=data))
+        try:
+            response = self._dispatch(method=u'POST', url=self.hub, data=data)
+        except (req_exceptions.RequestException, ) as err:
+            err_msg = u"%s request to topic %s failed with exception: %s" % (
+                mode.capitalize(), self.topic, err)
+            raise SubscriptionError(err_msg)
 
         is_sync = verify_mode == u'sync'
         expected_code = codes.NO_CONTENT if is_sync else codes.ACCEPTED
@@ -124,8 +130,10 @@ class AbstractSubscription(models.Model):
         if succeeded:
             return response
 
-        err = u"Subscription to topic %s failed with %s status code: %s" % (
-            self.topic, response.status_code, response.text)
+        err = u"%s to topic %s failed with %s status code: %s" % (
+            mode.capitalize(), self.topic,
+            response.status_code, response.text
+        )
         raise SubscriptionError(err)
 
     def _update_status(self, succeeded, is_subscribe, is_sync):
@@ -139,13 +147,13 @@ class AbstractSubscription(models.Model):
         else:
             self.status = choose((self.SUB_REJECTED, self.UNSUB_REJECTED))
 
-    def _prep_request(self, request):
+    def _extra_request_kw(self, **initial_request_kw):
         # overwrite to add special auth, headers, data, etc before preparing
-        return request.prepare()
+        return initial_request_kw
 
-    def _dispatch(self, request):
-        preped = self._prep_request(request)
-        response = Session().send(preped)
+    def _dispatch(self, **request_kw):
+        req_kwargs = self._extra_request_kw(**request_kw)
+        response = request_sender(**req_kwargs)
         return response
 
     def __unicode__(self):
