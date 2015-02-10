@@ -112,7 +112,6 @@ class AbstractSubscription(models.Model):
             data[u'hub.verify_token'] = self.verify_token
         if lease_seconds is not None:
             data[u'hub.lease_seconds'] = lease_seconds
-
         try:
             response = self._dispatch(method=u'POST', url=self.hub, data=data)
         except (req_exceptions.RequestException, ) as err:

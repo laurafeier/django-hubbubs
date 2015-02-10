@@ -97,12 +97,7 @@ class AbstractSubscriptionAdmin(admin.ModelAdmin):
             try:
                 new_object = form.save(commit=True)
             except (SubscriptionError, ) as err:
-                err_msg = "%s requested for topic %s failed: %s" % (
-                    action_name.capitalize(),
-                    subscription.topic,
-                    err
-                )
-                messages.error(request, err_msg)
+                messages.error(request, str(err))
             else:
                 changed_fields = getattr(
                     form, 'get_changed_fields_msg',
@@ -115,8 +110,11 @@ class AbstractSubscriptionAdmin(admin.ModelAdmin):
                 )
                 self.log_change(request, new_object, change_message)
                 messages.info(request, change_message)
-                return HttpResponseRedirect('admin:%s_%s_changelist' % (
-                    opts.app_label, opts.model_name))
+                return HttpResponseRedirect(
+                    reverse('admin:%s_%s_changelist' % (
+                        opts.app_label, opts.module_name)
+                    )
+                )
 
         adminForm = admin.helpers.AdminForm(
             form,

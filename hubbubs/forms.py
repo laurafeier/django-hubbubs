@@ -105,5 +105,29 @@ class SubscribeForm(forms.ModelForm):
         return self.instance
 
 
-class UnsubscribeForm(forms.ModelForm):
-    pass
+class UnsubscribeForm(SubscribeForm):
+
+    subscribe = SubmitButtonField(initial='Unsubscribe to topic')
+
+    fieldsets = [
+        (None, {
+            'fields': [
+                ('topic', 'hub', 'site'),
+                'verify_mode',
+                ('generate_verification_token', 'custom_verification_token'),
+                'subscribe'
+            ]
+        })
+    ]
+    readonly = ('topic', 'hub', 'site')
+    required_fields = ()
+
+    def save(self, *args, **kwargs):
+        commit = kwargs.get('commit', True)
+        if not commit:
+            return self.instance
+
+        self.instance.unsubscribe(
+            verify_mode=self.cleaned_data.get('verify_mode', 'async')
+        )
+        return self.instance
