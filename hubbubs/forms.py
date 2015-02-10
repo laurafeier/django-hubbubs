@@ -107,7 +107,7 @@ class SubscribeForm(forms.ModelForm):
 
 class UnsubscribeForm(SubscribeForm):
 
-    subscribe = SubmitButtonField(initial='Unsubscribe to topic')
+    subscribe = SubmitButtonField(initial='Unsubscribe from topic')
 
     fieldsets = [
         (None, {
