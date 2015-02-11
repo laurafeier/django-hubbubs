@@ -92,6 +92,10 @@ class AbstractSubscriberCallback(View):
                 subscription.verify_token, verify_token)
             )
 
+        if not is_subscribe:
+            subscription.secret = ''
+            subscription.verify_token = ''
+
         subscription.status = choose_status(
             (AbstractSubscription.ACTIVE, AbstractSubscription.INACTIVE))
         subscription.set_expiry(lease_seconds)
@@ -102,17 +106,26 @@ class AbstractSubscriberCallback(View):
         subscription = self._get_object(object_id)
         message = request.body
 
-        if not message.strip():
+        def ignore(reason):
+            logger.error("%s" % reason)
             return HttpResponse('')
 
+        if not message.strip():
+            return ignore("No message provided")
+
         if subscription.secret:
-            signature = request.META.get('X-Hub-Signature', '')
+            signature = request.META.get('HTTP_X_HUB_SIGNATURE', '')
             if not signature:
-                return HttpResponse('')
+                return ignore("No signature provided")
+
             secret = subscription.secret.encode('utf-8')
             sha1 = hmac.new(secret, message, hashlib.sha1).hexdigest()
             if force_unicode(signature) != force_unicode("sha1=%s" % sha1):
-                return HttpResponse('')
+                return ignore(
+                    "Signature mismatch: expected %s but got %s" % (
+                        force_unicode(signature),
+                        force_unicode("sha1=%s" % sha1))
+                    )
 
         feed_data = (feedparser.parse(message) or {})
         links = feed_data.get('feed', {}).get('links', [])
