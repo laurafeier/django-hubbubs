@@ -84,6 +84,11 @@ class AbstractSubscription(models.Model):
     unsubscribe.alters_data = True
 
     def set_expiry(self, seconds):
+        try:
+            seconds = int(seconds)
+        except (TypeError, ValueError, ):
+            seconds = None
+
         if seconds is None:
             self.lease_expiration = None
             return
