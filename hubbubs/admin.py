@@ -9,6 +9,7 @@ from django.core.urlresolvers import reverse
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.template.defaultfilters import timesince_filter
+from django.conf import settings
 from .models import Subscription
 from .forms import SubscribeForm, UnsubscribeForm
 from .exceptions import SubscriptionError
@@ -159,4 +160,5 @@ class SubscriptionAdmin(AbstractSubscriptionAdmin):
     pass
 
 
-admin.site.register(Subscription, SubscriptionAdmin)
+if 'hubbubs' in settings.INSTALLED_APPS:
+    admin.site.register(Subscription, SubscriptionAdmin)

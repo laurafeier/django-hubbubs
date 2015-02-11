@@ -33,7 +33,8 @@ class AbstractSubscriberCallback(View):
 
     @method_decorator(csrf_exempt)
     def dispatch(self, *args, **kwargs):
-        return super(SubscriberCallback, self).dispatch(*args, **kwargs)
+        return super(AbstractSubscriberCallback, self)\
+            .dispatch(*args, **kwargs)
 
     def _get_object(self, object_id):
         try:
