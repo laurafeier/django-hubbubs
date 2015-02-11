@@ -12,6 +12,10 @@ from hubbubs.signals import feed_available
 import hmac
 import hashlib
 import feedparser
+import urllib
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class AbstractSubscriberCallback(View):
@@ -51,6 +55,7 @@ class AbstractSubscriberCallback(View):
         mode = request.GET.get(u'hub.mode', '')
         topic = request.GET.get(u'hub.topic', '')
         verify_token = request.GET.get(u'hub.verify_token', '')
+
         try:
             lease_seconds = request.GET.get(u'hub.lease_seconds', '')
         except (ValueError, TypeError, ):
@@ -60,29 +65,37 @@ class AbstractSubscriberCallback(View):
         is_subscribe = mode == 'subscribe'
         choose_status = lambda s: s[0] if is_subscribe else s[1]
 
-        has_correct_token = (
-            not subscription.verify_token or
-            subscription.verify_token == verify_token)
-
-        if (not all((challenge, mode, topic)) or
-                subscription.topic != topic or
-                mode not in allowed_modes or
-                mode == 'denied' or
-                not has_correct_token or
-                (is_subscribe and lease_seconds is None)):
-            subscription.status = choose_status(
-                (AbstractSubscription.SUB_REJECTED,
-                 AbstractSubscription.UNSUB_REJECTED)
-            )
+        def failed(reason):
             subscription.set_expiry(None)
             subscription.save()
-            raise Http404
+            logger.error("%s" % reason)
+            raise Http404(reason)
+
+        if not all((challenge, mode, topic)):
+            failed("One of the required fields(challenge, mode or topic)"
+                   " is missing")
+        if subscription.topic not in (topic, urllib.unquote(topic)):
+            failed("Subscription topic mismatch: expected %s but got %s" % (
+                subscription.topic, topic
+                )
+            )
+        if mode not in allowed_modes:
+            failed("Subscription mode %s not allowed" % mode)
+        if mode == 'denied':
+            failed("Subscription is denied.")
+
+        has_incorrect_token = (
+            (not subscription.verify_token and verify_token) or
+            subscription.verify_token != verify_token)
+        if has_incorrect_token:
+            failed("Subscription token mismatch: expected %s but got %s" % (
+                subscription.verify_token, verify_token)
+            )
 
         subscription.status = choose_status(
             (AbstractSubscription.ACTIVE, AbstractSubscription.INACTIVE))
         subscription.set_expiry(lease_seconds)
         subscription.save()
-
         return HttpResponse(challenge, content_type='text/plain')
 
     def post(self, request, object_id, *args, **kwargs):

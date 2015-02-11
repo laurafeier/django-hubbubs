@@ -117,6 +117,12 @@ class AbstractSubscription(models.Model):
             data[u'hub.verify_token'] = self.verify_token
         if lease_seconds is not None:
             data[u'hub.lease_seconds'] = lease_seconds
+
+        # token & secret needs to be updated before request is sent
+        #   so that callback can check against latest token/secret
+        self.__class__.objects.filter(id=self.id).update(
+            verify_token=self.verify_token,
+            secret=self.secret)
         try:
             response = self._dispatch(method=u'POST', url=self.hub, data=data)
         except (req_exceptions.RequestException, ) as err:
