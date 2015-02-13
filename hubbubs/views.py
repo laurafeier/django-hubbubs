@@ -2,7 +2,6 @@ from django.db import router
 from django.views.generic import View
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import classonlymethod, method_decorator
-from django.utils.encoding import force_unicode
 from django.http import HttpResponse, Http404
 from django.shortcuts import get_object_or_404
 from django.core.exceptions import ImproperlyConfigured
@@ -117,15 +116,19 @@ class AbstractSubscriberCallback(View):
             signature = request.META.get('HTTP_X_HUB_SIGNATURE', '')
             if not signature:
                 return ignore("No signature provided")
+            if not signature.startswith("sha1="):
+                return ignore("Invalid signature format")
 
-            secret = subscription.secret.encode('utf-8')
-            sha1 = hmac.new(secret, message, hashlib.sha1).hexdigest()
-            if force_unicode(signature) != force_unicode("sha1=%s" % sha1):
+            sha1 = hmac.new(
+                subscription.secret.encode('utf-8'),
+                message.encode('utf-8'),
+                hashlib.sha1
+            ).hexdigest()
+            if signature[5:] != sha1:
                 return ignore(
-                    "Signature mismatch: expected %s but got %s" % (
-                        force_unicode(signature),
-                        force_unicode("sha1=%s" % sha1))
-                    )
+                    "Signature mismatch: expected %s but got sha1=%s" % (
+                        signature, sha1)
+                )
 
         feed_data = (feedparser.parse(message) or {})
         links = feed_data.get('feed', {}).get('links', [])
