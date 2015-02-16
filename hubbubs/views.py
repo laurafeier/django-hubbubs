@@ -119,15 +119,20 @@ class AbstractSubscriberCallback(View):
             if not signature.startswith("sha1="):
                 return ignore("Invalid signature format")
 
+            content = message
+            if isinstance(content, unicode):
+                content = content.encode('utf-8')
+
             sha1 = hmac.new(
                 subscription.secret.encode('utf-8'),
-                message.encode('utf-8'),
+                content,
                 hashlib.sha1
             ).hexdigest()
             if signature[5:] != sha1:
                 return ignore(
-                    "Signature mismatch: expected %s but got sha1=%s" % (
-                        signature, sha1)
+                    "Signature mismatch: X-Hub-Signature is %s but "
+                    "computed is sha1=%s. Body: %s" % (
+                        signature, sha1, message)
                 )
 
         feed_data = (feedparser.parse(message) or {})
