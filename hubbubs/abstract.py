@@ -54,11 +54,7 @@ class AbstractSubscription(models.Model):
         unique_together = (("topic", "site"), )
 
     def uses_ssl(self):
-        return (
-            USE_SSL or
-            urlparse(self.topic or '').scheme == 'https' or
-            urlparse(self.hub or '').scheme == 'https'
-        )
+        return USE_SSL
 
     @property
     def callback_url(self):

@@ -3,7 +3,7 @@ from django.utils import crypto, html
 from django.utils.safestring import mark_safe
 from django.utils.text import get_text_list
 from django.utils.translation import ugettext as _
-from .settings import LEASE_SECONDS
+from .settings import LEASE_SECONDS, USE_SSL
 
 # thanks to https://djangosnippets.org/snippets/2312/
 class SubmitButtonWidget(forms.CheckboxInput):
@@ -39,7 +39,7 @@ class SubscribeForm(forms.ModelForm):
     generate_verification_token = forms.BooleanField(initial=True)
     custom_verification_token = forms.CharField(max_length=255)
 
-    generate_secret_key = forms.BooleanField(initial=True)
+    generate_secret_key = forms.BooleanField(initial=USE_SSL)
     custom_secret_key = forms.CharField(max_length=255)
 
     subscribe = SubmitButtonField(initial='Subscribe to topic')
